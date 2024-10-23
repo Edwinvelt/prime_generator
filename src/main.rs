@@ -3,9 +3,9 @@
 
 fn main() {
     // default: 10.001
-    let limit = 200000;
+    let limit = 100;
     let result = sieve_of_atkin(limit);
-    let mut prime_list: Vec<usize> = Vec::new();
+    let mut prime_list: Vec<usize> = result.to_vec();
 
     for prime in result {
         prime_list.push(prime);
@@ -17,7 +17,11 @@ fn main() {
 // !! I don't understand what the hell is happening...
 fn sieve_of_atkin(limit: usize) -> Vec<usize> {
     let mut is_prime = vec![false; limit + 1];
+    // FIXME:
     let sqrt_limit = (limit as f64).sqrt() as usize;
+
+    let squares: Vec<usize> = (0..=sqrt_limit).map(|x| x * x).collect();
+    println!("{}", sqrt_limit);
 
     // ! The algorithm completely ignores any numbers with remainder modulo 60 that is divisible by two, three, or five,
     // ! since numbers with a modulo 60 remainder divisible by one of these three primes are themselves divisible by that prime.
@@ -28,51 +32,47 @@ fn sieve_of_atkin(limit: usize) -> Vec<usize> {
     // ? Testing with iterators instead of explicit for loops | No performance difference
     (1..=sqrt_limit).for_each(|x| {
         (1..=sqrt_limit).step_by(2).for_each(|y| {
-            let n = 4 * x.pow(2) + y.pow(2);
+            let n = 4 * squares[x] + squares[y];
             if n <= limit && matches!(n % 60, 1 | 13 | 17 | 29 | 37 | 41 | 49 | 53) {
                 is_prime[n] = !is_prime[n];
             }
         });
     });
 
-    // Alg step 2 | 3*x.pow(2) + y.pow(2) = n is odd and n is squarefree
-    for x in (2..=sqrt_limit).step_by(2) {
-        for y in (2..=sqrt_limit).step_by(2) {
-            let n = 3 * x.pow(2) + y.pow(2);
+    // Alg step 2 | 3*x^2 + y^2 = n is odd and n is squarefree
+    (1..=sqrt_limit).step_by(2).for_each(|x| {
+        (2..=sqrt_limit).step_by(2).for_each(|y| {
+            let n = 3 * squares[x] + squares[y];
             if n <= limit && matches!(n % 60, 7 | 19 | 31 | 43) {
-                // sets n in prime too false, if it was true
                 is_prime[n] = !is_prime[n];
             }
-        }
-    }
+        });
+    });
 
-    // Alg step 3 | Solution to: 3x.pow2 - y.pow(2) = n is odd and n is squarefree
-    for x in 2..=sqrt_limit {
-        for y in (1..x).step_by(2) {
-            let n = 3 * x.pow(2) - y.pow(2);
+    // Alg step 3 | Solution to: 3*x^2 - y^2 = n is odd and n is squarefree
+    (2..=sqrt_limit).for_each(|x| {
+        (1..x).step_by(2).for_each(|y| {
+            let n = 3 * squares[x] - squares[y];
             if n <= limit && matches!(n % 60, 11 | 23 | 47 | 59) {
                 is_prime[n] = !is_prime[n];
             }
-        }
-    }
+        });
+    });
 
-    // Eliminate composites by sieving
-    for n in 7..=sqrt_limit {
+    // Eliminate composites by marking their multiples as non-prime
+    (5..=sqrt_limit).for_each(|n| {
         if is_prime[n] {
             let n2 = n * n;
-            for k in (n2..=limit).step_by(n2) {
-                is_prime[k] = false;
+            if n2 <= limit {
+                (n2..=limit).step_by(n2).for_each(|k| {
+                    is_prime[k] = false;
+                });
             }
         }
-    }
+    });
 
-    // Collect Primes
-    let mut primes = vec![2, 3, 5];
-    for n in (7..=limit).step_by(2) {
-        if is_prime[n] {
-            primes.push(n);
-        }
-    }
-    // End result
+    // Collect all primes
+    let mut primes = vec![2, 3, 5,];
+    primes.extend((5..=limit).filter(|&n| is_prime[n]));
     primes
 }
